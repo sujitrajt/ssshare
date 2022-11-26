@@ -1,0 +1,53 @@
+<html>
+    <style>
+        table, th, td {
+          border:1px solid black;
+        }
+        table{
+            border-collapse: collapse;
+        }
+        #quake thead{
+            padding-top: 12px;
+            padding-bottom: 12px;
+            text-align: left;
+            background-color: blue;
+            color: white;
+            width: 100%;
+        }
+        #quake td{
+            border: 1px solid #ddd;
+            padding: 8px; 
+        }
+        #quake tr:nth-child(even){background-color: #f2f2f2;}
+    </style>
+    <body>
+        <h1 style="text-align:center;">Sujitraj Thirumurhty</h1>
+        <h2 style="text-align:center;">1001830297</h2>
+        <br> <br> 
+        <table id="quake">
+            <thead>
+                <tr>
+                    <td>userName</td>
+                </tr>
+                
+            </thead>
+            <tbody>
+                {%for i in user %}
+                <tr>
+                    <td>{{i}}</td>     
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <br>
+        <h4>Upload a Image</h4>
+        <div class="center">
+            <form method="POST" action="/imageupload" enctype="multipart/form-data">
+                <input type="file" name="image">
+                <button>Submit</button>
+            </form>
+        </div>
+        <h4>View Image</h4>
+        <a href="{{ url_for('showimage')}}"><button>View Image</button></a><br>
+    </body>
+</html>

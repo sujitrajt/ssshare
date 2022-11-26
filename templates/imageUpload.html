@@ -1,0 +1,26 @@
+<html>
+    <body>
+        <h1>Sujitraj</h1>
+        <form method="post" action="/imageUpload" enctype="multipart/form-data">
+            <dl>
+                <p>
+                    <input type="file" name="file" class="form-control" required>
+                </p>
+            </dl>
+            <p>
+                <input type="submit" value="Submit" class="btn btn-info">
+            </p>
+        </form>
+        <p>
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                <ul>
+                {% for message in messages %}
+                  <li>{{ message }}</li>
+                {% endfor %}
+                </ul>
+              {% endif %}
+            {% endwith %}
+        </p>
+    </body>
+</html>
