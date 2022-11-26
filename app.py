@@ -16,6 +16,7 @@ import os
 # from db import intialDb,db
 
 #References 
+# Cloud Deployment Link : https://ssshare.azurewebsites.net/ 
 # https://flask-admin.readthedocs.io/en/latest/introduction/
 # https://danidee10.github.io/2016/11/14/flask-by-example-7.html
 # https://www.youtube.com/watch?v=71EU8gnZqZQ&ab_channel=ArpanNeupane
@@ -24,24 +25,40 @@ import os
 # https://stackoverflow.com/questions/44926465/upload-image-in-flask
 # https://flask-bcrypt.readthedocs.io/en/1.0.1/
 # https://www.rithmschool.com/courses/intermediate-flask/hashing-passwords-flask
+# https://stackoverflow.com/questions/31358578/display-image-stored-as-binary-blob-in-template
+# https://www.youtube.com/watch?v=I9BBGulrOmo&t=369s&ab_channel=Cairocoders
+# https://www.youtube.com/watch?v=JDKmLB_HpTQ&t=258s&ab_channel=DawoodIddris
+# https://www.youtube.com/watch?v=UIJKdCIEXUQ&t=1794s&ab_channel=CoreySchafer
+# https://www.youtube.com/watch?v=gHfUt-N2_Jw&t=637s&ab_channel=CodeJana
+# https://stackoverflow.com/questions/37031399/change-model-representation-in-flask-admin-without-modifying-model
+# https://flask-admin.readthedocs.io/en/latest/introduction/#getting-started
+# https://ckraczkowsky.medium.com/building-a-secure-admin-interface-with-flask-admin-and-flask-security-13ae81faa05
+# https://stackoverflow.com/questions/20431572/how-to-reference-a-modelview-in-flask-admin
+# https://www.youtube.com/watch?v=iIhAfX4iek0&t=661s&ab_channel=TechWithTim
+# https://www.youtube.com/watch?v=FEyNt9iFPGc&ab_channel=PrettyPrinted
+# https://flask.palletsprojects.com/en/1.1.x/patterns/fileuploads/
+# https://github.com/Alexmod/Flask-User-and-Flask-admin
+# https://www.youtube.com/watch?v=pPSZpCVRbvQ
+# https://stackoverflow.com/questions/11017466/flask-to-return-image-stored-in-database
+
+# instantiating the flask name
 app = Flask(__name__)
 UPLOAD_FOLDER = 'static/uploads/'
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
-
 app.config['SECRET_KEY'] = 'city6528'
-
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+#Intiating an Admin View
 admin = Admin(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-
+#Allowed Extensions
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
- 
+#reference used : https://tutorial101.blogspot.com/2021/04/python-flask-upload-and-display-image.html
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -63,6 +80,7 @@ class User(db.Model, UserMixin):
 
 
 #overiding model view controller to check if the user is an admin or not
+# reference used : https://flask-admin.readthedocs.io/en/latest/introduction/
 class Controller(ModelView):
     def is_accessible(self):
         print("hello",current_user.is_admin)
@@ -75,6 +93,7 @@ class Controller(ModelView):
     def not_auth(self):
         return "Access Denied"
 
+#Adding admin view to the website and creating a session
 admin.add_view(Controller(User,db.session))
 
 #Register Form Model with column name, username,passoword
@@ -83,7 +102,7 @@ class RegisterForm(FlaskForm):
     username = StringField(validators=[InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Please enter your username"})
     password = PasswordField(validators=[InputRequired(), Length(min=8, max=20)], render_kw={"placeholder": "Plese Type in your password"})
     submit = SubmitField('Register')
-
+    # https://github.com/arpanneupane19/Python-Flask-Authentication-Tutorial
     def check_user(self, username):
         existing_user = User.query.filter_by(username=username.data).first()
         if existing_user:
@@ -108,12 +127,12 @@ class Upload(db.Model):
     filename = db.Column(db.String(50))
     data = db.Column(db.LargeBinary)
 
-
+# home route 
 @app.route('/')
 def home():
     return render_template('home.html')
 
-
+#Loging endpoint
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -124,7 +143,7 @@ def login():
         #quering the user model to get the user details from the database
         user = User.query.filter_by(username=form.username.data).first()
         if user:
-            #check password
+            #check password 
             if bcrypt.check_password_hash(user.password, form.password.data):
                 login_user(user)
                 return render_template('dashboard.html',name = uname)
@@ -157,12 +176,17 @@ def imageupload():
         # mimetype = image.mimetype
         # if not file_name or not mimetype:
         #     return "Bad file type"
-        upload = Upload(filename=image.filename, data=image.read())
-        db.session.add(upload)
-        db.session.commit()
-
-        # return 'Img Uploaded!', 200
-        return render_template('imgdownload.html')
+        #checking the file type only if the file type is valid it will be uploaded into the database
+        if image and allowed_file(image.filename):
+            upload = Upload(filename=image.filename, data=image.read())
+            db.session.add(upload)
+            db.session.commit()
+            return redirect(url_for('imageGroup'))
+        else :
+            return abort(404)
+            # flash("Upload a Image file only")
+            # return redirect(url_for('imageupload'))
+        # return render_template('imgdownload.html')
 
 
 @app.route('/createGroup',methods = ['POST','GET'])
@@ -171,6 +195,7 @@ def createGroup():
     if request.method == 'GET':
         return render_template('createGroup.html')
     if request.method == 'POST':
+        # fetching all the details of the group
         groupName = request.form["groupName"]
         groupDesc = request.form['groupDesc']
         userName = current_user.username
@@ -211,6 +236,7 @@ def viewGroup():
         if selectGroup == 'Image':
             return redirect(url_for('imageGroup'))
         else :
+            flash('Please select image to enter into image group')
             return render_template('dashboard.html')
 
 @app.route('/joinGroup',methods = ['POST','GET'])
@@ -239,25 +265,34 @@ def joinGroup():
         c.execute("INSERT into grp (groupName,userName) VALUES (?,?)",[groupName,user_name])
         conn.commit()
         return render_template('dashboard.html')
-        
 
-
-
-# @app.route('/download/<int:id>')
-# @login_required
-# def viewimage(id):
-#     upload = Upload.query.filter_by(id=id).first()
-#     return send_file(BytesIO(upload.data), attachment_filename=upload.filename, as_attachment=True)
 
 @app.route('/download', methods=["GET", "POST"])
+@login_required
 def download():
-    if request.method == "POST":
-
-        conn= sqlite3.connect("database.db")
+    imageDetails = []
+    if request.method == 'GET':
+        conn = sqlite3.connect("database.db")
         cursor = conn.cursor()
+        cursor.execute("select id,filename from upload")
+        rs = cursor.fetchall()
+        for i in rs : 
+            id=i[0]
+            filename=i[1]
+            print(id,filename)
+            imageDetails.append([id,filename])
+        return render_template('downloadImage.html',imgDetails = imageDetails)
+    if request.method == "POST":
+        imageSelected = request.form['imageSelected']
+        print(imageSelected)
+        conn = sqlite3.connect("database.db")
+        cursor = conn.cursor()
+        cursor.execute("select * from upload where id = ?",[imageSelected])
+        rs = cursor.fetchall()
+        print(rs)
         print("IN DATABASE FUNCTION ")
-        c = cursor.execute(""" SELECT * FROM  upload """)
-        rs = c.fetchall()
+        # c = cursor.execute(""" SELECT * FROM  upload where id """)
+        # rs = c.fetchall()
         # print(rs)
         for i in rs:
             id=i[0]
@@ -265,9 +300,7 @@ def download():
             data = i[2]
         print(id)
         conn.commit()
-        cursor.close()
-        conn.close()
-
+        # https://stackoverflow.com/questions/11017466/flask-to-return-image-stored-in-database
         return send_file(BytesIO(data), attachment_filename=filename, as_attachment=True)
 
 
@@ -285,6 +318,8 @@ def viewImg(id):
         filename=x[1]
         data=x[2]
         break
+    # https://stackoverflow.com/questions/31358578/display-image-stored-as-binary-blob-in-template
+
     image = b64encode(data).decode("utf-8")
     return render_template("viewImg.html", image=image)
 
@@ -297,8 +332,6 @@ def viewImg(id):
 
 #     return Response(img.filename)
 
-
-
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
@@ -310,14 +343,17 @@ def logout():
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
+        #hashing the password to store it in database
         hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
         new_user = User(username=form.username.data, password=hashed_password)
+        # adding user to database as well as creating a session to that user. 
         db.session.add(new_user)
         db.session.commit()
         return redirect(url_for('login'))
     return render_template('register.html', form=form)
 
 @app.route('/imageUpload',methods = ['POST','GET'])
+@login_required
 def imageUpload():
     if request.method == 'GET':
         return render_template('imageUpload.html')
@@ -337,10 +373,11 @@ def imageUpload():
             print("file uploaded successfully")
             return render_template('imageUpload.html')
         else:
-            flash('Allowed image types are - png, jpg, jpeg, gif')
+            flash('Accepted image types are - png, jpg, jpeg, gif')
         # return redirect(request.url)
 
 @app.route('/imageGroup',methods = ['POST','GET'])
+@login_required
 def imageGroup():
     users = []
     if request.method == 'GET':
@@ -357,6 +394,7 @@ def imageGroup():
         pass
 
 @app.route('/showimage',methods = ['POST','GET'])
+@login_required
 def showimage():
     imageDetails = []
     if request.method == 'GET':
