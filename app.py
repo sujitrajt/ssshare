@@ -99,7 +99,7 @@ admin.add_view(Controller(User,db.session))
 #Register Form Model with column name, username,passoword
 class RegisterForm(FlaskForm):
     name = StringField(validators=[InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Please enter your name"})
-    username = StringField(validators=[InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Please enter your username"})
+    username = StringField(validators=[InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Please enter your username(email Id)","pattern":"[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$"})
     password = PasswordField(validators=[InputRequired(), Length(min=8, max=20)], render_kw={"placeholder": "Plese Type in your password"})
     submit = SubmitField('Register')
     # https://github.com/arpanneupane19/Python-Flask-Authentication-Tutorial
@@ -111,7 +111,7 @@ class RegisterForm(FlaskForm):
 
 #loginform model with column username password and submit
 class LoginForm(FlaskForm):
-    username = StringField(validators=[InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Username"})
+    username = StringField(validators=[InputRequired(), Length(min=4, max=30)], render_kw={"placeholder": "Username" })
     password = PasswordField(validators=[InputRequired(), Length(min=8, max=20)], render_kw={"placeholder": "Password"})
     submit = SubmitField('Login')
 
@@ -132,24 +132,30 @@ class Upload(db.Model):
 def home():
     return render_template('home.html')
 
-#Loging endpoint
+#login endpoint
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
-    # form2 = RegisterForm()
-    uname=form.username.data
-    print(uname)
-    if form.validate_on_submit():
-        #quering the user model to get the user details from the database
-        user = User.query.filter_by(username=form.username.data).first()
-        if user:
+    if request.method == 'POST':
+
+        # form2 = RegisterForm()
+        uname=form.username.data
+        print(uname)
+        if form.validate_on_submit():
+            #quering the user model to get the user details from the database
+            user = User.query.filter_by(username=form.username.data).first()
+            if user:
             #check password 
-            if bcrypt.check_password_hash(user.password, form.password.data):
-                login_user(user)
-                return render_template('dashboard.html',name = uname)
-                # return redirect(url_for('dashboard'))
+                if bcrypt.check_password_hash(user.password, form.password.data):
+                    login_user(user)
+                    #return render_template('dashboard.html',name = uname)
+                    return redirect(url_for('dashboard'))
+                else:
+                    #jsonify({'internal server error': 'return back to login page'}), HTTP_500_INTERNAL_SERVER_ERROR
+                    flash("Wrong Username or password Try Again!!!!")
     return render_template('login.html', form=form)
 
+ 
 
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
@@ -236,7 +242,7 @@ def viewGroup():
         if selectGroup == 'Image':
             return redirect(url_for('imageGroup'))
         else :
-            flash('Please select image to enter into image group')
+            flash('Please select image to enter into image group other groups will be implemented later')
             return render_template('dashboard.html')
 
 @app.route('/joinGroup',methods = ['POST','GET'])
@@ -342,39 +348,43 @@ def logout():
 @ app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm()
-    if form.validate_on_submit():
-        #hashing the password to store it in database
-        hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
-        new_user = User(username=form.username.data, password=hashed_password)
-        # adding user to database as well as creating a session to that user. 
-        db.session.add(new_user)
-        db.session.commit()
-        return redirect(url_for('login'))
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            #hashing the password to store it in database
+            hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
+            new_user = User(username=form.username.data, password=hashed_password)
+            # adding user to database as well as creating a session to that user. 
+            db.session.add(new_user)
+            db.session.commit()
+            return redirect(url_for('login'))
+        else:
+            flash('Please enter username as a email and check minimum length of password is 8')
     return render_template('register.html', form=form)
 
-@app.route('/imageUpload',methods = ['POST','GET'])
-@login_required
-def imageUpload():
-    if request.method == 'GET':
-        return render_template('imageUpload.html')
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            flash('No file part')
-            return render_template('imageUpload.html')
-        file = request.files['file']
-        if file.filename == '':
-            flash('No image selected for uploading')
-            return render_template('imageUpload.html')
-        if file and allowed_file(file.filename):
-            print("hello world",file)
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            flash('Image successfully uploaded')
-            print("file uploaded successfully")
-            return render_template('imageUpload.html')
-        else:
-            flash('Accepted image types are - png, jpg, jpeg, gif')
-        # return redirect(request.url)
+# Done for reference not required to run the project 
+# @app.route('/imageUpload',methods = ['POST','GET'])
+# @login_required
+# def imageUpload():
+#     if request.method == 'GET':
+#         return render_template('imageUpload.html')
+#     if request.method == 'POST':
+#         if 'file' not in request.files:
+#             flash('No file part')
+#             return render_template('imageUpload.html')
+#         file = request.files['file']
+#         if file.filename == '':
+#             flash('No image selected for uploading')
+#             return render_template('imageUpload.html')
+#         if file and allowed_file(file.filename):
+#             print("hello world",file)
+#             filename = secure_filename(file.filename)
+#             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+#             flash('Image successfully uploaded')
+#             print("file uploaded successfully")
+#             return render_template('imageUpload.html')
+#         else:
+#             flash('Accepted image types are - png, jpg, jpeg, gif')
+#         # return redirect(request.url)
 
 @app.route('/imageGroup',methods = ['POST','GET'])
 @login_required
@@ -421,6 +431,40 @@ def showimage():
             break
         image = b64encode(imageData).decode("utf-8")
     return render_template("viewImg.html", image=image)
+
+
+@app.route('/deleteImg',methods = ['POST','GET'])
+@login_required
+def deleteImg():
+    imageDetails = []
+    if request.method == 'GET':
+        conn = sqlite3.connect("database.db")
+        cursor = conn.cursor()
+        cursor.execute("select id,filename from upload")
+        rs = cursor.fetchall()
+        print(rs)
+        for i in rs : 
+            id=i[0]
+            filename=i[1]
+            print(id,filename)
+            imageDetails.append([id,filename])
+        return render_template('deleteImg.html',imgDetails = imageDetails)
+    if request.method == 'POST':
+        imageSelected = request.form['imageSelected']
+        print(imageSelected)
+        conn = sqlite3.connect("database.db")
+        cursor = conn.cursor()
+        cursor.execute("delete from upload where id = ?",[imageSelected])
+        conn.commit()
+        
+        # rs = cursor.fetchall()
+        # for i in rs:
+        #     imageData = i[0]
+        #     break
+        # image = b64encode(imageData).decode("utf-8")
+    # return render_template("imageGroup.html",user=imageDetails)
+    return redirect(url_for('imageGroup'))
+
 
 
 if __name__ == "__main__":
